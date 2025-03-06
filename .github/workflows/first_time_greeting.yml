@@ -44,15 +44,8 @@ jobs:
 
       # Greet first-time contributors:
       - name: 'Greet first-time contributors'
-        # Pin action to full length commit SHA
-        uses: actions/first-interaction@34f15e814fe48ac9312ccf29db4e74fa767cbab7 # v1.3.0
-        with:
-          repo-token: ${{ secrets.STDLIB_BOT_PAT_REPO_WRITE }}
-          issue-message: |
-            :wave: Hi there! :wave:
-
-            And thank you for opening your first issue! We will get back to you shortly. :runner: :dash:
-          pr-message: |
-            :wave: Hi there! :wave:
-
-            And thank you for opening your first pull request! We will review it shortly. :runner: :dash:
+        env:
+          ISSUE_NUMBER: ${{ github.event.issue.number }}
+          GITHUB_TOKEN: ${{ secrets.STDLIB_BOT_PAT_REPO_WRITE }}
+        run: |
+          . "$GITHUB_WORKSPACE/.github/workflows/scripts/first_time_greeting" $ISSUE_NUMBER
