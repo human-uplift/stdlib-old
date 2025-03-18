@@ -19,14 +19,6 @@
 # Workflow name:
 name: lint_pr_title
 
-# Workflow triggers:
-on:
-  pull_request:
-    types:
-      - synchronize
-      - opened
-      - reopened
-      - edited
 
 # Global permissions:
 permissions:
