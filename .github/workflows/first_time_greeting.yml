@@ -19,8 +19,6 @@
 # Workflow name:
 name: first_time_greeting
 
-# Workflow triggers:
-on: [pull_request_target, issues]
 
 # Global permissions:
 permissions:
