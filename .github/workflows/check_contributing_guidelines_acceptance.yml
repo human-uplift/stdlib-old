@@ -19,32 +19,6 @@
 # Workflow name:
 name: check_contributing_guidelines_acceptance
 
-# Workflow triggers:
-on:
-  # Allow the workflow to be triggered by other workflows
-  workflow_call:
-    # Define the input parameters for the workflow:
-    inputs:
-      pull_request_number:
-        description: 'Pull request number'
-        required: true
-        type: number
-      user:
-        required: true
-        type: string
-    # Define the secrets accessible by the workflow:
-    secrets:
-      STDLIB_BOT_GITHUB_TOKEN:
-        description: 'stdlib-bot GitHub token to create pull request comments'
-        required: true
-
-  # Trigger on pull request events:
-  pull_request_target:
-    types:
-      - opened
-      - reopened
-      - edited
-
 # Global permissions:
 permissions:
   # Allow read-only access to the repository contents:
