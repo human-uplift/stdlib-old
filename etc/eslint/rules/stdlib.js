@@ -125,6 +125,47 @@ rules[ 'stdlib/doctest' ] = 'off';
 */
 rules[ 'stdlib/doctest-marker' ] = 'error';
 
+/**
+* Enforce one blank line between requires and example code in JSDoc.
+*
+* @name jsdoc-example-require-spacing
+* @memberof rules
+* @type {string}
+* @default 'error'
+*
+* @example
+* // Bad...
+* /**
+* * Fréchet distribution constructor.
+* *
+* * @module @stdlib/stats/base/dists/frechet/ctor
+* *
+* * @example
+* * var Frechet = require( '@stdlib/stats/base/dists/frechet/ctor' );
+* * var frechet = new Frechet( 1.0, 1.0, 0.5 );
+* *
+* * var y = frechet.cdf( 0.8 );
+* * // returns ~0.036
+* *\/
+*
+* @example
+* // Good...
+* /**
+* * Fréchet distribution constructor.
+* *
+* * @module @stdlib/stats/base/dists/frechet/ctor
+* *
+* * @example
+* * var Frechet = require( '@stdlib/stats/base/dists/frechet/ctor' );
+* *
+* * var frechet = new Frechet( 1.0, 1.0, 0.5 );
+* *
+* * var y = frechet.cdf( 0.8 );
+* * // returns ~0.036
+* *\/
+*/
+rules[ 'stdlib/jsdoc-example-require-spacing' ] = 'error';
+
 /* eslint-disable stdlib/jsdoc-doctest-quote-props */
 
 /**
