@@ -53,6 +53,8 @@ limitations under the License.
 
 <section class="intro">
 
+Hi there...
+
 We believe in a future in which the web is a preferred environment for numerical computation. To help realize this future, we've built stdlib.
 
 stdlib ([/ˈstændərd lɪb/][ipa-english] "standard lib") is a standard library with an emphasis on numerical and scientific computation, written in JavaScript (and C) for execution in browsers and in Node.js. The library provides a collection of robust, high performance libraries for mathematics, statistics, data processing, streams, and more and includes many of the utilities you would expect from a standard library.
