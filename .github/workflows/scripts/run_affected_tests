@@ -154,7 +154,7 @@ main() {
 	files=""
 	for dir in ${directories}; do
 		# Include test files directly in the test directory or in subdirectories of test...
-		pkg_test_files=$(find "${dir}/test" -type f -name "test*.js" | grep -v '/fixtures/' | sort -u | tr '\n' ' ') || true
+		pkg_test_files=$(find "${dir}/test" -type f -name "test*.js" -not -path "*/fixtures/*" | sort -u | tr '\n' ' ') || true
 		if [ -n "${pkg_test_files}" ]; then
 			files="${files} ${pkg_test_files}"
 		fi
