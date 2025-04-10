@@ -23,14 +23,14 @@
 const fs = require('fs');
 const path = require('path');
 const { exec } = require('child_process');
-const tape = require('tape');
-const IS_WINDOWS = require('@stdlib/assert-is-windows');
+const os = require('os');
 
 
 // VARIABLES //
 
 const ROOT_DIR = path.resolve(__dirname, '..', '..', '..');
 const SCRIPT_PATH = path.join(ROOT_DIR, '.github', 'workflows', 'scripts', 'run_affected_tests');
+const IS_WINDOWS = os.platform() === 'win32';
 
 
 // FUNCTIONS //
@@ -115,27 +115,24 @@ function cleanupTestStructure(baseDir, callback) {
 */
 function testScript() {
     if (IS_WINDOWS) {
-        tape('Skip test on Windows', function test(t) {
-            t.skip('Test is not supported on Windows');
-            t.end();
-        });
+        console.log('Skip test on Windows');
+        process.exit(0);
         return;
     }
 
     const testBasePath = path.join(ROOT_DIR, 'lib', 'node_modules', '@stdlib', 'test-affected-tests');
     
-    tape('run_affected_tests finds test files in nested directories', function test(t) {
-        t.plan(4);
+    console.log('Testing run_affected_tests finds test files in nested directories');
+    
+    createTestStructure(testBasePath, function onCreate(err) {
+        if (err) {
+            console.error('Failed to create test structure:', err.message);
+            process.exit(1);
+        }
         
-        createTestStructure(testBasePath, function onCreate(err) {
-            if (err) {
-                t.fail('Failed to create test structure: ' + err.message);
-                return t.end();
-            }
-            
-            // Define a temporary script to extract test files without running them
-            const tempScriptPath = path.join(ROOT_DIR, 'temp_extract_tests.sh');
-            const scriptContent = `#!/usr/bin/env bash
+        // Define a temporary script to extract test files without running them
+        const tempScriptPath = path.join(ROOT_DIR, 'temp_extract_tests.sh');
+        const scriptContent = `#!/usr/bin/env bash
 cd "${ROOT_DIR}"
 # Modified from run_affected_tests to just print the test files it would run
 changed="lib/node_modules/@stdlib/test-affected-tests/test"
@@ -153,54 +150,57 @@ files=\$(echo "\${files}" | xargs)
 files=\$(echo "\${files}" | grep -v '/fixtures/' || true)
 echo "\${files}"
 `;
+        
+        try {
+            fs.writeFileSync(tempScriptPath, scriptContent);
+            fs.chmodSync(tempScriptPath, '755');
             
-            try {
-                fs.writeFileSync(tempScriptPath, scriptContent);
-                fs.chmodSync(tempScriptPath, '755');
-                
-                execute(tempScriptPath, { cwd: ROOT_DIR }, function onExecute(execError, stdout, stderr) {
-                    if (execError) {
-                        t.fail('Failed to execute test script: ' + execError.message);
-                        return cleanupAndEnd();
-                    }
-                    
-                    const foundFiles = stdout.trim().split(' ');
-                    t.ok(foundFiles.length >= 3, 'Should find at least 3 test files');
-                    
-                    const hasTopLevelTest = foundFiles.some(file => file.endsWith('/test/test.js'));
-                    const hasNestedTest = foundFiles.some(file => file.endsWith('/test/nested/test.js'));
-                    const hasDeepNestedTest = foundFiles.some(file => file.endsWith('/test/nested/deep/test.js'));
-                    
-                    t.ok(hasTopLevelTest, 'Should find top-level test file');
-                    t.ok(hasNestedTest, 'Should find nested test file');
-                    t.ok(hasDeepNestedTest, 'Should find deep nested test file');
-                    
-                    cleanupAndEnd();
-                });
-            } catch (writeErr) {
-                t.fail('Failed to write temporary script: ' + writeErr.message);
-                cleanupAndEnd();
-            }
-            
-            function cleanupAndEnd() {
-                // Clean up temporary script
-                try {
-                    if (fs.existsSync(tempScriptPath)) {
-                        fs.unlinkSync(tempScriptPath);
-                    }
-                } catch (e) {
-                    console.error('Error cleaning up temporary script:', e);
+            execute(tempScriptPath, { cwd: ROOT_DIR }, function onExecute(execError, stdout, stderr) {
+                if (execError) {
+                    console.error('Failed to execute test script:', execError.message);
+                    return cleanupAndEnd(1);
                 }
                 
-                // Clean up test structure
-                cleanupTestStructure(testBasePath, function onCleanup(cleanupErr) {
-                    if (cleanupErr) {
-                        console.error('Error cleaning up test structure:', cleanupErr);
-                    }
-                    t.end();
-                });
+                const foundFiles = stdout.trim().split(' ');
+                const success = foundFiles.length >= 3 && 
+                    foundFiles.some(file => file.endsWith('/test/test.js')) &&
+                    foundFiles.some(file => file.endsWith('/test/nested/test.js')) &&
+                    foundFiles.some(file => file.endsWith('/test/nested/deep/test.js'));
+                
+                if (success) {
+                    console.log('Test passed! All test files found:');
+                    console.log('Found files:', foundFiles);
+                    cleanupAndEnd(0);
+                } else {
+                    console.error('Test failed!');
+                    console.error('Expected to find all test files including those in nested directories');
+                    console.error('Found files:', foundFiles);
+                    cleanupAndEnd(1);
+                }
+            });
+        } catch (writeErr) {
+            console.error('Failed to write temporary script:', writeErr.message);
+            cleanupAndEnd(1);
+        }
+        
+        function cleanupAndEnd(exitCode) {
+            // Clean up temporary script
+            try {
+                if (fs.existsSync(tempScriptPath)) {
+                    fs.unlinkSync(tempScriptPath);
+                }
+            } catch (e) {
+                console.error('Error cleaning up temporary script:', e);
             }
-        });
+            
+            // Clean up test structure
+            cleanupTestStructure(testBasePath, function onCleanup(cleanupErr) {
+                if (cleanupErr) {
+                    console.error('Error cleaning up test structure:', cleanupErr);
+                }
+                process.exit(exitCode);
+            });
+        }
     });
 }
 
