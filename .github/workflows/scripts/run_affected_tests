@@ -59,110 +59,110 @@ heartbeat_pid=""
 #
 # $1 - error status
 on_error() {
-	echo 'ERROR: An error was encountered during execution.' >&2
-	cleanup
-	exit "$1"
+        echo 'ERROR: An error was encountered during execution.' >&2
+        cleanup
+        exit "$1"
 }
 
 # Runs clean-up tasks.
 cleanup() {
-	stop_heartbeat
+        stop_heartbeat
 }
 
 # Starts a heartbeat.
 #
 # $1 - heartbeat interval
 start_heartbeat() {
-	echo 'Starting heartbeat...' >&2
+        echo 'Starting heartbeat...' >&2
 
-	# Create a heartbeat and send to background:
-	heartbeat "$1" &
+        # Create a heartbeat and send to background:
+        heartbeat "$1" &
 
-	# Capture the heartbeat pid:
-	heartbeat_pid=$!
-	echo "Heartbeat pid: ${heartbeat_pid}" >&2
+        # Capture the heartbeat pid:
+        heartbeat_pid=$!
+        echo "Heartbeat pid: ${heartbeat_pid}" >&2
 }
 
 # Runs an infinite print loop.
 #
 # $1 - heartbeat interval
 heartbeat() {
-	while true; do
-		echo "$(date) - heartbeat..." >&2;
-		sleep "$1";
-	done
+        while true; do
+                echo "$(date) - heartbeat..." >&2;
+                sleep "$1";
+        done
 }
 
 # Stops the heartbeat print loop.
 stop_heartbeat() {
-	echo 'Stopping heartbeat...' >&2
-	kill "${heartbeat_pid}"
+        echo 'Stopping heartbeat...' >&2
+        kill "${heartbeat_pid}"
 }
 
 # Prints a success message.
 print_success() {
-	echo 'Success!' >&2
+        echo 'Success!' >&2
 }
 
 # Main execution sequence.
 main() {
-	start_heartbeat "${heartbeat_interval}"
+        start_heartbeat "${heartbeat_interval}"
 
-	# Only keep files which reside in package directories:
-	changed=$(echo "${changed}" | tr ' ' '\n' | grep '^lib/node_modules/@stdlib') || true
+        # Only keep files which reside in package directories:
+        changed=$(echo "${changed}" | tr ' ' '\n' | grep '^lib/node_modules/@stdlib') || true
 
-	# Find unique package directories:
-	directories=$(echo "${changed}" | tr ' ' '\n' | sed -E 's/\/(bin|data|etc|include|lib|src|test)\/?$//' | uniq)
+        # Find unique package directories:
+        directories=$(echo "${changed}" | tr ' ' '\n' | sed -E 's/\/(bin|data|etc|include|lib|src|test)\/?$//' | uniq)
 
-	if [ -z "${directories}" ]; then
-		echo 'No packages to test.' >&2
-		cleanup
-		print_success
-		exit 0
-	fi
+        if [ -z "${directories}" ]; then
+                echo 'No packages to test.' >&2
+                cleanup
+                print_success
+                exit 0
+        fi
 
-	# Extract package names from changed package directories (e.g., @stdlib/math/base/special/sin) by removing the leading 'lib/node_modules/':
-	packages=$(echo "${directories}" | sed -E 's/^lib\/node_modules\///')
+        # Extract package names from changed package directories (e.g., @stdlib/math/base/special/sin) by removing the leading 'lib/node_modules/':
+        packages=$(echo "${directories}" | sed -E 's/^lib\/node_modules\///')
 
-	# Find all package directories which `require()` one of the changed packages:
-	required_by=""
-	for package in ${packages}; do
-		echo "Finding packages which depend on '${package}'..."
-		escaped_package=$(echo "$package" | sed 's/[\/&]/\\&/g')
-		dependents=$(find lib/node_modules/@stdlib -type f -name '*.js' -exec grep -ol -E "require\( [']${escaped_package}['] \)" {} +) || true
-		echo "Found: ${dependents}"
-		if [ -n "${dependents}" ]; then
-			dependents=$(dirname $dependents | sed -E 's/\/(bin|data|etc|include|lib|src|test)\/?$//' | sort -u)
-			echo "List of dependents: ${dependents}"
-			required_by="${required_by} ${dependents}"
-		fi
-	done
+        # Find all package directories which `require()` one of the changed packages:
+        required_by=""
+        for package in ${packages}; do
+                echo "Finding packages which depend on '${package}'..."
+                escaped_package=$(echo "$package" | sed 's/[\/&]/\\&/g')
+                dependents=$(find lib/node_modules/@stdlib -type f -name '*.js' -exec grep -ol -E "require\( [']${escaped_package}['] \)" {} +) || true
+                echo "Found: ${dependents}"
+                if [ -n "${dependents}" ]; then
+                        dependents=$(dirname $dependents | sed -E 's/\/(bin|data|etc|include|lib|src|test)\/?$//' | sort -u)
+                        echo "List of dependents: ${dependents}"
+                        required_by="${required_by} ${dependents}"
+                fi
+        done
 
-	# Concatenate the list of changed package directories and package directories which `require()` one of the changed packages:
-	if [ -n "${required_by}" ]; then
-		directories="${directories} ${required_by}"
-	fi
+        # Concatenate the list of changed package directories and package directories which `require()` one of the changed packages:
+        if [ -n "${required_by}" ]; then
+                directories="${directories} ${required_by}"
+        fi
 
-	# Build native add-ons for packages (if applicable):
-	for pkg in ${packages}; do
-		if [ -f "lib/node_modules/${pkg}/binding.gyp" ]; then
-			NODE_ADDONS_PATTERN="${pkg}" make install-node-addons
-		fi
-	done
+        # Build native add-ons for packages (if applicable):
+        for pkg in ${packages}; do
+                if [ -f "lib/node_modules/${pkg}/binding.gyp" ]; then
+                        NODE_ADDONS_PATTERN="${pkg}" make install-node-addons
+                fi
+        done
 
-	# Find all test files in package directories:
-	files=$(find ${directories} -maxdepth 2 -wholename '**/test/test*.js' | grep -v '/fixtures/' | sort -u | tr '\n' ' ') || true
+        # Find all test files in package directories (including nested test directories):
+        files=$(find ${directories} -wholename '**/test/**/test*.js' | grep -v '/fixtures/' | sort -u | tr '\n' ' ') || true
 
-	# Exclude files residing in test fixtures directories:
-	files=$(echo "${files}" | grep -v '/fixtures/') || true
+        # Exclude files residing in test fixtures directories:
+        files=$(echo "${files}" | grep -v '/fixtures/') || true
 
-	if [[ -n "${files}" ]]; then
-		make test-javascript-files-min FILES="${files}"
-	fi
+        if [[ -n "${files}" ]]; then
+                make test-javascript-files-min FILES="${files}"
+        fi
 
-	cleanup
-	print_success
-	exit 0
+        cleanup
+        print_success
+        exit 0
 }
 
 # Set an error handler to print captured output and perform any clean-up tasks:
