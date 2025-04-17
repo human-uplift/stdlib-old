@@ -25,15 +25,26 @@ FIND_TESTS_FLAGS ?= \
 	-regex "$(TESTS_FILTER)" \
 	$(FIND_TESTS_EXCLUDE_FLAGS)
 
+# Define the command flags for finding test files in subdirectories of test directories:
+FIND_NESTED_TESTS_FLAGS ?= \
+	-type f \
+	-path "*/$(TESTS_FOLDER)/*/*.$(JAVASCRIPT_FILENAME_EXT)" \
+	! -path "*/$(TESTS_FIXTURES_FOLDER)/*" \
+	$(FIND_TESTS_EXCLUDE_FLAGS)
+
 ifneq ($(OS), Darwin)
 	FIND_TESTS_FLAGS := -regextype posix-extended $(FIND_TESTS_FLAGS)
+	FIND_NESTED_TESTS_FLAGS := -regextype posix-extended $(FIND_NESTED_TESTS_FLAGS)
 endif
 
 # Define a command to list test files:
 FIND_TESTS_CMD ?= find $(find_kernel_prefix) $(ROOT_DIR) $(FIND_TESTS_FLAGS)
 
-# Define the list of test files:
-TESTS ?= $(shell $(FIND_TESTS_CMD))
+# Define a command to list nested test files:
+FIND_NESTED_TESTS_CMD ?= find $(find_kernel_prefix) $(ROOT_DIR) $(FIND_NESTED_TESTS_FLAGS)
+
+# Define the list of test files (combining both regular and nested tests):
+TESTS ?= $(shell $(FIND_TESTS_CMD); $(FIND_NESTED_TESTS_CMD) | sort | uniq)
 
 
 # TARGETS #
@@ -44,5 +55,6 @@ TESTS ?= $(shell $(FIND_TESTS_CMD))
 
 list-tests:
 	$(QUIET) find $(find_kernel_prefix) $(ROOT_DIR) $(FIND_TESTS_FLAGS) $(find_print_list)
+	$(QUIET) find $(find_kernel_prefix) $(ROOT_DIR) $(FIND_NESTED_TESTS_FLAGS) $(find_print_list)
 
 .PHONY: list-tests
